@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IAES — Intelligent & Autonomous Engineering Systems</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #020810;
+    --bg2: #040f1e;
+    --cyan: #00f5ff;
+    --green: #00ff88;
+    --orange: #ff6b00;
+    --white: #e8f4ff;
+    --dim: #3a5068;
+    --grid: rgba(0,245,255,0.04);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Rajdhani', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Disable custom cursor on touch devices */
+  @media (hover: none) and (pointer: coarse) {
+    .cursor, .cursor-ring { display: none; }
+    body { cursor: auto; }
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 12px; height: 12px;
+    background: var(--cyan);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s, background 0.2s;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1px solid var(--cyan);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.15s ease, width 0.2s, height 0.2s, opacity 0.2s;
+    opacity: 0.5;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scan line effect */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  section, nav, header, footer { position: relative; z-index: 2; }
+
+  /* ── NAV (improved mobile) ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 60px;
+    background: rgba(2,8,16,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,245,255,0.12);
+    z-index: 100;
+  }
+  .nav-logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 1.1rem;
+    letter-spacing: 3px;
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan);
+  }
+  .nav-logo span { color: var(--orange); }
+  .nav-links {
+    display: flex;
+    gap: 36px;
+  }
+  .nav-links a {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--cyan); }
+  .nav-status {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--green);
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse-dot 1.4s infinite;
+  }
+  /* Mobile menu toggle */
+  .menu-toggle {
+    display: none;
+    background: none;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-size: 1.5rem;
+    padding: 0 10px;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    .nav-links {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      background: rgba(2,8,16,0.95);
+      backdrop-filter: blur(12px);
+      padding: 20px;
+      gap: 20px;
+      border-bottom: 1px solid var(--cyan);
+    }
+    .nav-links.active { display: flex; }
+    .menu-toggle { display: block; }
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(0,255,136,0); }
+  }
+
+  /* ── HERO ── */
+  header {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 120px 40px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-orb {
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,245,255,0.06) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: orb-breathe 4s ease-in-out infinite;
+  }
+  .hero-orb2 {
+    position: absolute;
+    width: 900px; height: 900px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,245,255,0.05);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: spin-slow 30s linear infinite;
+  }
+  .hero-orb2::before {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    background: var(--cyan);
+    border-radius: 50%;
+    top: -5px; left: 50%;
+    box-shadow: 0 0 20px var(--cyan);
+  }
+  @keyframes orb-breathe {
+    0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.6; }
+    50% { transform: translate(-50%,-50%) scale(1.1); opacity: 1; }
+  }
+  @keyframes spin-slow { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+  .hero-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 5px;
+    color: var(--orange);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fade-up 0.8s ease 0.3s forwards;
+  }
+  .hero-title {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: clamp(2.4rem, 6vw, 5.5rem);
+    line-height: 1.05;
+    letter-spacing: -1px;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fade-up 0.8s ease 0.5s forwards;
+  }
+  .hero-title .line1 { display: block; color: var(--white); }
+  .hero-title .line2 {
+    display: block;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--cyan);
+    text-shadow: none;
+  }
+  .hero-title .line3 { display: block; color: var(--cyan); text-shadow: 0 0 40px var(--cyan); }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: rgba(232,244,255,0.55);
+    max-width: 560px;
+    line-height: 1.8;
+    margin-bottom: 52px;
+    letter-spacing: 0.5px;
+    opacity: 0;
+    animation: fade-up 0.8s ease 0.7s forwards;
+  }
+
+  .hero-btns {
+    display: flex; gap: 20px;
+    opacity: 0;
+    animation: fade-up 0.8s ease 0.9s forwards;
+  }
+  .btn-primary {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 16px 36px;
+    background: var(--cyan);
+    color: var(--bg);
+    border: none;
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .btn-primary:hover { background: var(--white); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,245,255,0.3); }
+  .btn-outline {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 16px 36px;
+    background: transparent;
+    color: var(--cyan);
+    border: 1px solid rgba(0,245,255,0.4);
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .btn-outline:hover { border-color: var(--cyan); background: rgba(0,245,255,0.06); transform: translateY(-2px); }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── STATS BAR (responsive) ── */
+  .stats-bar {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    border-top: 1px solid rgba(0,245,255,0.1);
+    border-bottom: 1px solid rgba(0,245,255,0.1);
+    background: rgba(0,245,255,0.02);
+  }
+  .stat-item {
+    flex: 1 1 150px; min-width: 120px;
+    padding: 28px 10px;
+    text-align: center;
+    border-right: 1px solid rgba(0,245,255,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-item::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 2px;
+    background: var(--cyan);
+    transition: width 0.4s ease;
+  }
+  .stat-item:hover::before { width: 100%; }
+  .stat-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--cyan);
+    display: block;
+    text-shadow: 0 0 20px rgba(0,245,255,0.4);
+  }
+  .stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* ── SECTION COMMON ── */
+  .section-header {
+    text-align: center;
+    margin-bottom: 70px;
+  }
+  .section-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 4px;
+    color: var(--orange);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-weight: 800;
+    font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+    color: var(--white);
+  }
+  .section-title span { color: var(--cyan); }
+  .section-line {
+    width: 60px; height: 2px;
+    background: linear-gradient(90deg, var(--cyan), transparent);
+    margin: 20px auto 0;
+  }
+
+  /* ── SYSTEMS MODULE ── */
+  #systems { padding: 100px 60px; }
+  .systems-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .sys-card {
+    background: var(--bg2);
+    border: 1px solid rgba(0,245,255,0.07);
+    padding: 40px 36px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  .sys-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
+  }
+  .sys-card:hover { background: rgba(0,245,255,0.03); border-color: rgba(0,245,255,0.2); transform: translateY(-4px); }
+  .sys-card:hover::before { transform: scaleX(1); }
+
+  .card-icon {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    display: block;
+    filter: drop-shadow(0 0 8px rgba(0,245,255,0.4));
+  }
+  .card-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--orange);
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+  }
+  .card-desc {
+    font-size: 0.9rem;
+    font-weight: 300;
+    color: rgba(232,244,255,0.5);
+    line-height: 1.7;
+  }
+  .card-status {
+    margin-top: 24px;
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+  }
+  .dot-active { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse-dot 1.5s infinite; }
+  .dot-warn { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); animation: pulse-dot 2s infinite; }
+  .dot-idle { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
+
+  /* ── LIVE MONITOR (responsive) ── */
+  #monitor { padding: 100px 60px; background: rgba(0,245,255,0.012); border-top: 1px solid rgba(0,245,255,0.08); border-bottom: 1px solid rgba(0,245,255,0.08); }
+  .monitor-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: start;
+  }
+  .monitor-canvas-wrap {
+    border: 1px solid rgba(0,245,255,0.12);
+    background: var(--bg2);
+    padding: 24px;
+    position: relative;
+  }
+  .canvas-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .canvas-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--cyan);
+    text-transform: uppercase;
+  }
+  .canvas-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    color: var(--green);
+    border: 1px solid rgba(0,255,136,0.3);
+    padding: 3px 10px;
+  }
+  canvas#waveCanvas {
+    width: 100%;
+    height: 180px;
+    display: block;
+  }
+  canvas#botCanvas {
+    width: 100%;
+    height: 260px;
+    display: block;
+    margin-top: 16px;
+    border-top: 1px solid rgba(0,245,255,0.06);
+    padding-top: 16px;
+  }
+  .monitor-panels { display: flex; flex-direction: column; gap: 16px; }
+  .panel {
+    background: var(--bg2);
+    border: 1px solid rgba(0,245,255,0.08);
+    padding: 22px 24px;
+    position: relative;
+  }
+  .panel-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 3px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .panel-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--cyan);
+  }
+  .panel-val.orange { color: var(--orange); }
+  .panel-val.green { color: var(--green); }
+  .panel-bar-wrap { margin-top: 10px; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .panel-bar { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .bar-cyan { background: linear-gradient(90deg, var(--cyan), rgba(0,245,255,0.4)); }
+  .bar-orange { background: linear-gradient(90deg, var(--orange), rgba(255,107,0,0.4)); }
+  .bar-green { background: linear-gradient(90deg, var(--green), rgba(0,255,136,0.4)); }
+
+  @media (max-width: 900px) {
+    .monitor-layout { grid-template-columns: 1fr; }
+    #systems, #monitor, #features { padding: 70px 24px; }
+    .hero-btns { flex-direction: column; align-items: stretch; }
+    .btn-primary, .btn-outline { text-align: center; }
+  }
+
+  /* ── LOG ── */
+  .log-wrap {
+    background: var(--bg2);
+    border: 1px solid rgba(0,245,255,0.08);
+    padding: 20px 24px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .log-wrap::-webkit-scrollbar { width: 4px; }
+  .log-wrap::-webkit-scrollbar-track { background: transparent; }
+  .log-wrap::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.2); border-radius: 2px; }
+  .log-entry {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    line-height: 2;
+    color: rgba(232,244,255,0.45);
+    display: flex; gap: 12px;
+  }
+  .log-entry .ts { color: var(--orange); min-width: 70px; }
+  .log-entry.active { color: var(--cyan); }
+  .log-entry.warn { color: var(--orange); }
+
+  /* ── FEATURES ── */
+  #features { padding: 100px 60px; }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .feat-item {
+    padding: 32px 28px;
+    border: 1px solid rgba(0,245,255,0.06);
+    background: rgba(0,245,255,0.015);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  .feat-item:hover { border-color: rgba(0,245,255,0.18); }
+  .feat-icon { font-size: 1.6rem; margin-bottom: 16px; display: block; }
+  .feat-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .feat-desc {
+    font-size: 0.85rem;
+    color: rgba(232,244,255,0.45);
+    line-height: 1.7;
+  }
+  .feat-line {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, transparent, var(--cyan), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .feat-item:hover .feat-line { opacity: 1; }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 40px 60px;
+    border-top: 1px solid rgba(0,245,255,0.08);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(0,0,0,0.3);
+    flex-wrap: wrap; gap: 20px;
+  }
+  .footer-logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+    color: var(--cyan);
+  }
+  .footer-copy {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--dim);
+  }
+  .footer-links { display: flex; gap: 28px; }
+  .footer-links a {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--cyan); }
+
+  @media (max-width: 600px) {
+    footer { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV with mobile toggle -->
+<nav>
+  <div class="nav-logo">I<span>A</span>ES</div>
+  <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
+  <div class="nav-links" id="navLinks">
+    <a href="#systems">Systems</a>
+    <a href="#monitor">Monitor</a>
+    <a href="#features">Features</a>
+    <a href="#">Docs</a>
+  </div>
+  <div class="nav-status">
+    <div class="status-dot"></div>
+    SYSTEM ONLINE
+  </div>
+</nav>
+
+<!-- HERO -->
+<header>
+  <div class="hero-orb"></div>
+  <div class="hero-orb2"></div>
+  <div class="hero-tag">// Hackathon 2026 — Team IAES</div>
+  <h1 class="hero-title">
+    <span class="line1">INTELLIGENT</span>
+    <span class="line2">&amp; AUTONOMOUS</span>
+    <span class="line3">ENGINEERING</span>
+  </h1>
+  <p class="hero-sub">
+    Next-generation autonomous systems that perceive, decide, and act — 
+    bridging AI intelligence with real-world engineering infrastructure.
+  </p>
+  <div class="hero-btns">
+    <a class="btn-primary" href="#systems">Explore Systems</a>
+    <a class="btn-outline" href="#monitor">Live Monitor</a>
+  </div>
+</header>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-num" id="s1">0</span>
+    <span class="stat-label">Autonomous Agents</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num" id="s2">0</span>
+    <span class="stat-label">Tasks Processed / s</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num" id="s3">0<span style="font-size:1rem">ms</span></span>
+    <span class="stat-label">Avg Response Time</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num" id="s4">0<span style="font-size:1rem">%</span></span>
+    <span class="stat-label">System Uptime</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num" id="s5">0</span>
+    <span class="stat-label">Sensors Active</span>
+  </div>
+</div>
+
+<!-- SYSTEMS -->
+<section id="systems">
+  <div class="section-header">
+    <span class="section-tag">// Core Architecture</span>
+    <h2 class="section-title">Autonomous <span>Engineering</span> Modules</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="systems-grid">
+    <div class="sys-card">
+      <span class="card-icon">🤖</span>
+      <div class="card-num">MOD-001</div>
+      <div class="card-title">Perception Engine</div>
+      <div class="card-desc">Multi-modal sensor fusion combining LiDAR, computer vision, and SLAM to build real-time 3D environmental maps for autonomous navigation.</div>
+      <div class="card-status"><span class="dot-active"></span><span style="color:var(--green)">ACTIVE</span></div>
+    </div>
+    <div class="sys-card">
+      <span class="card-icon">🧠</span>
+      <div class="card-num">MOD-002</div>
+      <div class="card-title">Decision Core</div>
+      <div class="card-desc">Reinforcement learning-based decision framework enabling real-time planning, obstacle avoidance, and goal-directed behavior in dynamic environments.</div>
+      <div class="card-status"><span class="dot-active"></span><span style="color:var(--green)">ACTIVE</span></div>
+    </div>
+    <div class="sys-card">
+      <span class="card-icon">⚙️</span>
+      <div class="card-num">MOD-003</div>
+      <div class="card-title">Control Systems</div>
+      <div class="card-desc">Adaptive PID and model-predictive controllers that translate high-level decisions into precise mechanical actuation across multi-DOF robotic systems.</div>
+      <div class="card-status"><span class="dot-active"></span><span style="color:var(--green)">ACTIVE</span></div>
+    </div>
+    <div class="sys-card">
+      <span class="card-icon">🌐</span>
+      <div class="card-num">MOD-004</div>
+      <div class="card-title">Edge Intelligence</div>
+      <div class="card-desc">Lightweight neural inference deployed on embedded hardware — enabling sub-10ms decision latency without cloud dependency in critical scenarios.</div>
+      <div class="card-status"><span class="dot-warn"></span><span style="color:var(--orange)">CALIBRATING</span></div>
+    </div>
+    <div class="sys-card">
+      <span class="card-icon">🔗</span>
+      <div class="card-num">MOD-005</div>
+      <div class="card-title">Multi-Agent Swarm</div>
+      <div class="card-desc">Distributed coordination protocol allowing heterogeneous agents to self-organize, share situational awareness, and execute collaborative tasks autonomously.</div>
+      <div class="card-status"><span class="dot-active"></span><span style="color:var(--green)">ACTIVE</span></div>
+    </div>
+    <div class="sys-card">
+      <span class="card-icon">🛡️</span>
+      <div class="card-num">MOD-006</div>
+      <div class="card-title">Safety Monitor</div>
+      <div class="card-desc">Redundant fault-detection layer with formal verification and hardware interlocks — ensuring failsafe operation under sensor degradation or adversarial input.</div>
+      <div class="card-status"><span class="dot-idle"></span><span style="color:var(--dim)">STANDBY</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE MONITOR -->
+<section id="monitor">
+  <div class="section-header">
+    <span class="section-tag">// Real-Time Dashboard</span>
+    <h2 class="section-title">Live <span>System</span> Monitor</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="monitor-layout">
+    <div>
+      <div class="monitor-canvas-wrap">
+        <div class="canvas-header">
+          <span class="canvas-title">// SENSOR FEED — Neural Telemetry</span>
+          <span class="canvas-badge">● LIVE</span>
+        </div>
+        <canvas id="waveCanvas" width="800" height="180"></canvas>
+        <canvas id="botCanvas" width="800" height="260"></canvas>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="canvas-header" style="margin-bottom:12px;">
+          <span class="canvas-title">// SYSTEM LOG</span>
+        </div>
+        <div class="log-wrap" id="logWrap">
+          <div class="log-entry active"><span class="ts">00:00:01</span><span>IAES BOOT SEQUENCE INITIALIZED</span></div>
+          <div class="log-entry"><span class="ts">00:00:02</span><span>Perception Engine loaded — 4 sensors online</span></div>
+          <div class="log-entry"><span class="ts">00:00:03</span><span>Decision Core v3.2.1 activated</span></div>
+          <div class="log-entry"><span class="ts">00:00:04</span><span>Swarm protocol handshake complete — 12 agents</span></div>
+          <div class="log-entry warn"><span class="ts">00:00:06</span><span>Edge module calibration in progress…</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="monitor-panels">
+      <div class="panel">
+        <div class="panel-label">CPU Load</div>
+        <div class="panel-val" id="cpu">--</div>
+        <div class="panel-bar-wrap"><div class="panel-bar bar-cyan" id="cpuBar" style="width:0%"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">Neural Inference / sec</div>
+        <div class="panel-val orange" id="inf">--</div>
+        <div class="panel-bar-wrap"><div class="panel-bar bar-orange" id="infBar" style="width:0%"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">Agents Active</div>
+        <div class="panel-val green" id="agents">--</div>
+        <div class="panel-bar-wrap"><div class="panel-bar bar-green" id="agentBar" style="width:0%"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">Network Latency</div>
+        <div class="panel-val" id="lat">--</div>
+        <div class="panel-bar-wrap"><div class="panel-bar bar-cyan" id="latBar" style="width:0%"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">Obstacle Detected</div>
+        <div class="panel-val orange" id="obs">--</div>
+        <div class="panel-bar-wrap"><div class="panel-bar bar-orange" id="obsBar" style="width:0%"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">Mission Progress</div>
+        <div class="panel-val green" id="prog">--</div>
+        <div class="panel-bar-wrap"><div class="panel-bar bar-green" id="progBar" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-header">
+    <span class="section-tag">// Technical Highlights</span>
+    <h2 class="section-title">Why <span>IAES</span> Wins</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="features-grid">
+    <div class="feat-item">
+      <div class="feat-line"></div>
+      <span class="feat-icon">⚡</span>
+      <div class="feat-title">Sub-10ms Latency</div>
+      <div class="feat-desc">Onboard neural inference runs in under 10ms using quantized models on edge hardware, enabling real-time response in physical systems.</div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-line"></div>
+      <span class="feat-icon">🔭</span>
+      <div class="feat-title">360° Perception</div>
+      <div class="feat-desc">Fused sensor data from cameras, LiDAR, ultrasonic, and IMU creates a complete environmental understanding in 3D space.</div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-line"></div>
+      <span class="feat-icon">📡</span>
+      <div class="feat-title">Mesh Communication</div>
+      <div class="feat-desc">Agents communicate peer-to-peer via a self-healing mesh — no single point of failure, robust in GPS-denied or signal-degraded environments.</div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-line"></div>
+      <span class="feat-icon">🎯</span>
+      <div class="feat-title">Adaptive Planning</div>
+      <div class="feat-desc">Dynamic re-planning using A* with learned heuristics adapts to new obstacles and changing objectives without manual reprogramming.</div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-line"></div>
+      <span class="feat-icon">🔒</span>
+      <div class="feat-title">Formal Safety</div>
+      <div class="feat-desc">Safety properties are formally verified at design time; runtime monitors enforce invariants and trigger controlled shutdown under anomaly.</div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-line"></div>
+      <span class="feat-icon">📊</span>
+      <div class="feat-title">Live Telemetry</div>
+      <div class="feat-desc">Full system observability with real-time dashboards, log streaming, and alert management — accessible from any device on the network.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">IAES // 2026</div>
+  <div class="footer-copy">INTELLIGENT &amp; AUTONOMOUS ENGINEERING SYSTEMS</div>
+  <div class="footer-links">
+    <a href="#">GitHub</a>
+    <a href="#">Docs</a>
+    <a href="#">Team</a>
+  </div>
+</footer>
+
+<script>
+// ── Cursor ──
+const cur = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px';
+  ring.style.left = e.clientX + 'px'; ring.style.top = e.clientY + 'px';
+});
+
+// ── Mobile menu toggle ──
+const menuToggle = document.getElementById('menuToggle');
+const navLinks = document.getElementById('navLinks');
+menuToggle.addEventListener('click', () => {
+  navLinks.classList.toggle('active');
+});
+
+// ── Counter animation ──
+function animCount(el, target, suffix='', duration=1800) {
+  let start = 0; const step = target / (duration/16);
+  const t = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.innerHTML = Math.floor(start) + suffix;
+    if(start >= target) clearInterval(t);
+  }, 16);
+}
+setTimeout(() => {
+  animCount(document.getElementById('s1'), 24);
+  animCount(document.getElementById('s2'), 3847);
+  animCount(document.getElementById('s3'), 8, 'ms');
+  animCount(document.getElementById('s4'), 99, '%');
+  animCount(document.getElementById('s5'), 128);
+}, 400);
+
+// ── Wave Canvas with resize handling ──
+const wc = document.getElementById('waveCanvas');
+const wctx = wc.getContext('2d');
+let wt = 0;
+function drawWave() {
+  if (!wc.parentElement) return;
+  wc.width = wc.parentElement.offsetWidth - 48;
+  wc.height = 180;
+  wctx.clearRect(0, 0, wc.width, wc.height);
+  const colors = ['rgba(0,245,255,0.8)', 'rgba(0,255,136,0.5)', 'rgba(255,107,0,0.4)'];
+  const freqs = [0.018, 0.025, 0.012];
+  const amps = [28, 18, 14];
+  const speeds = [0.04, 0.06, 0.03];
+  for(let w=0; w<3; w++) {
+    wctx.beginPath();
+    wctx.strokeStyle = colors[w];
+    wctx.lineWidth = w===0 ? 2 : 1.5;
+    for(let x=0; x<wc.width; x++) {
+      const y = 90 + Math.sin(x * freqs[w] + wt * speeds[w]) * amps[w]
+              + Math.sin(x * freqs[w]*2.3 + wt * speeds[w]*1.7) * (amps[w]*0.4);
+      x===0 ? wctx.moveTo(x,y) : wctx.lineTo(x,y);
+    }
+    wctx.stroke();
+  }
+  wt++;
+  requestAnimationFrame(drawWave);
+}
+drawWave();
+
+// ── Bot Canvas ──
+const bc = document.getElementById('botCanvas');
+const bctx = bc.getContext('2d');
+let bt = 0;
+const bots = Array.from({length:5}, (_, i) => ({
+  x: 100 + i*120, y: 130,
+  vx: (Math.random()-0.5)*0.8,
+  vy: (Math.random()-0.5)*0.8,
+  angle: Math.random()*Math.PI*2,
+  trail: []
+}));
+
+function drawBots() {
+  if (!bc.parentElement) return;
+  bc.width = bc.parentElement.offsetWidth - 48;
+  bc.height = 240;
+  bctx.clearRect(0, 0, bc.width, bc.height);
+  const cx = bc.width/2, cy = bc.height/2;
+
+  // Draw grid lines
+  bctx.strokeStyle = 'rgba(0,245,255,0.04)';
+  bctx.lineWidth = 1;
+  for(let x=0; x<bc.width; x+=40) { bctx.beginPath(); bctx.moveTo(x,0); bctx.lineTo(x,bc.height); bctx.stroke(); }
+  for(let y=0; y<bc.height; y+=40) { bctx.beginPath(); bctx.moveTo(0,y); bctx.lineTo(bc.width,y); bctx.stroke(); }
+
+  // Central hub
+  bctx.beginPath();
+  bctx.arc(cx, cy, 18, 0, Math.PI*2);
+  bctx.strokeStyle = 'rgba(0,245,255,0.3)';
+  bctx.lineWidth = 1;
+  bctx.stroke();
+  bctx.beginPath();
+  bctx.arc(cx, cy, 6, 0, Math.PI*2);
+  bctx.fillStyle = 'rgba(0,245,255,0.6)';
+  bctx.fill();
+
+  bots.forEach((bot, i) => {
+    // Update
+    bot.x += bot.vx; bot.y += bot.vy;
+    if(bot.x < 20 || bot.x > bc.width-20) bot.vx *= -1;
+    if(bot.y < 20 || bot.y > bc.height-20) bot.vy *= -1;
+    bot.angle += 0.02;
+    bot.trail.push({x: bot.x, y: bot.y});
+    if(bot.trail.length > 30) bot.trail.shift();
+
+    // Draw trail
+    for(let t=0; t<bot.trail.length-1; t++) {
+      const a = t/bot.trail.length;
+      bctx.beginPath();
+      bctx.strokeStyle = `rgba(0,245,255,${a*0.3})`;
+      bctx.lineWidth = 1;
+      bctx.moveTo(bot.trail[t].x, bot.trail[t].y);
+      bctx.lineTo(bot.trail[t+1].x, bot.trail[t+1].y);
+      bctx.stroke();
+    }
+
+    // Draw connection to hub
+    bctx.beginPath();
+    bctx.moveTo(cx, cy); bctx.lineTo(bot.x, bot.y);
+    bctx.strokeStyle = 'rgba(0,245,255,0.07)';
+    bctx.lineWidth = 1; bctx.stroke();
+
+    // Draw bot (diamond shape)
+    bctx.save(); bctx.translate(bot.x, bot.y); bctx.rotate(bot.angle);
+    bctx.beginPath();
+    bctx.moveTo(0,-10); bctx.lineTo(8,0); bctx.lineTo(0,10); bctx.lineTo(-8,0); bctx.closePath();
+    bctx.strokeStyle = i===0 ? 'rgba(0,245,255,0.9)' : 'rgba(0,255,136,0.7)';
+    bctx.lineWidth = 1.5; bctx.stroke();
+    bctx.fillStyle = i===0 ? 'rgba(0,245,255,0.15)' : 'rgba(0,255,136,0.1)';
+    bctx.fill();
+
+    // Direction indicator
+    bctx.beginPath(); bctx.moveTo(0,0); bctx.lineTo(0,-14);
+    bctx.strokeStyle = 'rgba(255,107,0,0.7)'; bctx.lineWidth = 1.5; bctx.stroke();
+    bctx.restore();
+
+    // Scan circle
+    bctx.beginPath();
+    bctx.arc(bot.x, bot.y, 30 + Math.sin(bt*0.05+i)*5, 0, Math.PI*2);
+    bctx.strokeStyle = 'rgba(0,245,255,0.06)';
+    bctx.lineWidth = 1; bctx.stroke();
+  });
+
+  bt++;
+  requestAnimationFrame(drawBots);
+}
+drawBots();
+
+// ── Live Panels ──
+function rand(min, max) { return Math.random()*(max-min)+min; }
+function updatePanels() {
+  const cpu = rand(42,78);
+  const inf = Math.floor(rand(180,320));
+  const ag = Math.floor(rand(18,24));
+  const lat = Math.floor(rand(4,12));
+  const obs = Math.floor(rand(0,8));
+  const prog = Math.floor(rand(60,95));
+  document.getElementById('cpu').textContent = cpu.toFixed(1)+'%';
+  document.getElementById('inf').textContent = inf;
+  document.getElementById('agents').textContent = ag;
+  document.getElementById('lat').textContent = lat+'ms';
+  document.getElementById('obs').textContent = obs;
+  document.getElementById('prog').textContent = prog+'%';
+  document.getElementById('cpuBar').style.width = cpu+'%';
+  document.getElementById('infBar').style.width = (inf/400*100)+'%';
+  document.getElementById('agentBar').style.width = (ag/24*100)+'%';
+  document.getElementById('latBar').style.width = (lat/20*100)+'%';
+  document.getElementById('obsBar').style.width = (obs/10*100)+'%';
+  document.getElementById('progBar').style.width = prog+'%';
+}
+updatePanels(); setInterval(updatePanels, 1800);
+
+// ── Log ──
+const logMessages = [
+  ['active','Agent-07 reached waypoint B3'],
+  ['','Sensor fusion delta: 0.3ms'],
+  ['active','Swarm rebalancing — 3 agents reassigned'],
+  ['warn','Obstacle at (14.2, -8.1) — rerouting'],
+  ['','Neural model inference: 6.2ms avg'],
+  ['active','Mission segment 4/7 complete'],
+  ['','IMU calibration OK — drift < 0.01°/s'],
+  ['warn','Edge module latency spike detected'],
+  ['active','Formation alpha restored — 12/12 agents'],
+  ['','Battery: Agent-03 at 62% — nominal'],
+];
+let logIdx = 0;
+const logWrap = document.getElementById('logWrap');
+function addLog() {
+  const [cls, msg] = logMessages[logIdx % logMessages.length];
+  const now = new Date();
+  const ts = now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry' + (cls ? ' '+cls : '');
+  entry.innerHTML = `<span class="ts">${ts}</span><span>${msg}</span>`;
+  logWrap.appendChild(entry);
+  logWrap.scrollTop = logWrap.scrollHeight;
+  logIdx++;
+}
+setInterval(addLog, 2200);
+
+// ── Resize handler for canvases ──
+window.addEventListener('resize', () => {
+  drawWave();
+  drawBots();
+});
+</script>
+</body>
+</html>

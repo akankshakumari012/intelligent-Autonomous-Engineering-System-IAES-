@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IAES — Backend Control Server</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080c10;
+  --panel: #0b1118;
+  --border: rgba(100,220,255,0.1);
+  --border-bright: rgba(100,220,255,0.28);
+  --cyan: #64dcff;
+  --green: #3dffb0;
+  --red: #ff4d6a;
+  --yellow: #ffd24d;
+  --dim: #2a3a4a;
+  --text: #c8dff0;
+  --text-dim: #4a6070;
+  --mono: 'JetBrains Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Noise overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.4;
+}
+
+/* Layout */
+.shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+  position: relative; z-index: 1;
+}
+
+/* ── TOPBAR with mobile menu ── */
+.topbar {
+  grid-column: 1/-1;
+  background: rgba(8,12,16,0.95);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 20px;
+  gap: 20px;
+  backdrop-filter: blur(10px);
+}
+.topbar-logo {
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--cyan);
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(100,220,255,0.5);
+  margin-right: 12px;
+}
+.topbar-logo span { color: var(--green); }
+.topbar-sep { width: 1px; height: 24px; background: var(--border); }
+.topbar-path {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+}
+.topbar-path b { color: var(--cyan); font-weight: 400; }
+.topbar-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 16px;
+}
+.uptime-badge {
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  color: var(--green);
+  border: 1px solid rgba(61,255,176,0.2);
+  padding: 3px 10px;
+  background: rgba(61,255,176,0.04);
+}
+.server-time {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.alert-btn {
+  position: relative;
+  background: none; border: 1px solid var(--border);
+  color: var(--text-dim); padding: 4px 12px;
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 1px; cursor: pointer;
+  transition: all 0.2s;
+}
+.alert-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.alert-dot {
+  position: absolute; top: -3px; right: -3px;
+  width: 7px; height: 7px;
+  background: var(--red); border-radius: 50%;
+  animation: blink 1.2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.menu-toggle {
+  display: none;
+  background: none; border: none;
+  color: var(--cyan); font-size: 1.5rem;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+/* ── SIDEBAR (collapsible on mobile) ── */
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px 0;
+  transition: left 0.3s ease;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--dim); }
+
+.sidebar-section {
+  padding: 0 0 16px;
+  border-bottom: 1px solid rgba(100,220,255,0.05);
+  margin-bottom: 16px;
+}
+.sidebar-label {
+  font-size: 0.58rem;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  padding: 0 16px 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { background: rgba(100,220,255,0.04); color: var(--text); border-left-color: rgba(100,220,255,0.3); }
+.nav-item.active { background: rgba(100,220,255,0.07); color: var(--cyan); border-left-color: var(--cyan); }
+.nav-item .icon { width: 16px; text-align: center; font-size: 0.9rem; }
+.nav-badge {
+  margin-left: auto;
+  font-size: 0.58rem;
+  background: rgba(255,77,106,0.15);
+  color: var(--red);
+  border: 1px solid rgba(255,77,106,0.2);
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+.nav-badge.green { background: rgba(61,255,176,0.1); color: var(--green); border-color: rgba(61,255,176,0.2); }
+
+/* Server health mini cards in sidebar */
+.sidebar-health { padding: 0 12px; display: flex; flex-direction: column; gap: 8px; }
+.health-item { background: rgba(100,220,255,0.03); border: 1px solid var(--border); padding: 8px 12px; }
+.health-name { font-size: 0.62rem; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 4px; }
+.health-bar-wrap { height: 3px; background: var(--dim); border-radius: 1px; overflow: hidden; }
+.health-bar { height: 100%; border-radius: 1px; transition: width 1s ease; }
+.hb-cyan { background: var(--cyan); }
+.hb-green { background: var(--green); }
+.hb-red { background: var(--red); }
+.health-val { font-size: 0.65rem; color: var(--cyan); margin-top: 3px; float: right; }
+
+/* Mobile sidebar */
+@media (max-width: 700px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar {
+    position: fixed;
+    top: 48px;
+    left: -220px;
+    width: 220px;
+    height: calc(100vh - 48px);
+    z-index: 200;
+  }
+  .sidebar.active { left: 0; }
+  .menu-toggle { display: block; }
+}
+
+/* ── MAIN ── */
+.main {
+  overflow-y: auto;
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.main::-webkit-scrollbar { width: 4px; }
+.main::-webkit-scrollbar-thumb { background: var(--dim); }
+
+/* Row layouts */
+.row { display: grid; gap: 16px; }
+.row-4 { grid-template-columns: repeat(4, 1fr); }
+.row-3 { grid-template-columns: repeat(3, 1fr); }
+.row-2 { grid-template-columns: 1fr 1fr; }
+.row-2-1 { grid-template-columns: 2fr 1fr; }
+.row-1-2 { grid-template-columns: 1fr 2fr; }
+
+/* Panel base */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.panel::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(100,220,255,0.15), transparent);
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-title {
+  font-size: 0.65rem;
+  letter-spacing: 2.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.panel-title b { color: var(--cyan); font-weight: 600; }
+.panel-action {
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  cursor: pointer;
+  background: none; border: none; font-family: var(--mono);
+  transition: color 0.2s;
+}
+.panel-action:hover { color: var(--cyan); }
+.panel-body { padding: 14px 16px; }
+
+/* ── METRIC CARDS ── */
+.metric-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.metric-card:hover { border-color: var(--border-bright); }
+.metric-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 2px;
+}
+.mc-cyan::before { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+.mc-green::before { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.mc-red::before { background: var(--red); }
+.mc-yellow::before { background: var(--yellow); }
+
+.mc-label { font-size: 0.6rem; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; }
+.mc-val {
+  font-family: var(--display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.mc-cyan .mc-val { color: var(--cyan); }
+.mc-green .mc-val { color: var(--green); }
+.mc-red .mc-val { color: var(--red); }
+.mc-yellow .mc-val { color: var(--yellow); }
+.mc-sub { font-size: 0.6rem; color: var(--text-dim); letter-spacing: 1px; }
+.mc-trend { font-size: 0.62rem; margin-top: 4px; }
+.mc-trend.up { color: var(--green); }
+.mc-trend.dn { color: var(--red); }
+
+/* ── API TABLE ── */
+.api-table { width: 100%; border-collapse: collapse; }
+.api-table th {
+  text-align: left;
+  font-size: 0.58rem;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  padding: 0 10px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.api-table td {
+  padding: 9px 10px;
+  font-size: 0.68rem;
+  border-bottom: 1px solid rgba(100,220,255,0.04);
+  vertical-align: middle;
+}
+.api-table tr:last-child td { border-bottom: none; }
+.api-table tr:hover td { background: rgba(100,220,255,0.02); }
+.method {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+.m-get { background: rgba(61,255,176,0.12); color: var(--green); border: 1px solid rgba(61,255,176,0.2); }
+.m-post { background: rgba(100,220,255,0.12); color: var(--cyan); border: 1px solid rgba(100,220,255,0.2); }
+.m-ws { background: rgba(255,210,77,0.12); color: var(--yellow); border: 1px solid rgba(255,210,77,0.2); }
+.m-del { background: rgba(255,77,106,0.12); color: var(--red); border: 1px solid rgba(255,77,106,0.2); }
+.endpoint-path { color: var(--text); font-size: 0.7rem; }
+.ep-status {
+  width: 6px; height: 6px; border-radius: 50%;
+  display: inline-block; margin-right: 6px;
+}
+.ep-ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.ep-warn { background: var(--yellow); animation: blink 1.5s infinite; }
+.ep-err { background: var(--red); animation: blink 0.8s infinite; }
+.latency-bar { display: flex; align-items: center; gap: 6px; }
+.lat-fill { height: 3px; background: var(--cyan); opacity: 0.5; }
+
+/* ── TERMINAL LOG ── */
+.terminal {
+  background: #050810;
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  height: 220px;
+  overflow-y: auto;
+  font-size: 0.68rem;
+  line-height: 1.9;
+}
+.terminal::-webkit-scrollbar { width: 3px; }
+.terminal::-webkit-scrollbar-thumb { background: var(--dim); }
+.log-line { display: flex; gap: 10px; }
+.log-ts { color: var(--text-dim); min-width: 80px; }
+.log-level { min-width: 40px; font-weight: 600; letter-spacing: 1px; }
+.lv-info { color: var(--cyan); }
+.lv-warn { color: var(--yellow); }
+.lv-err  { color: var(--red); }
+.lv-ok   { color: var(--green); }
+.log-msg { color: var(--text); }
+
+/* ── CHARTS ── */
+canvas { display: block; }
+
+/* ── DB TABLE ── */
+.db-table { width: 100%; border-collapse: collapse; }
+.db-table th {
+  text-align: left;
+  font-size: 0.58rem; letter-spacing: 2px;
+  color: var(--text-dim); text-transform: uppercase;
+  padding: 0 10px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.db-table td {
+  padding: 8px 10px;
+  font-size: 0.67rem;
+  border-bottom: 1px solid rgba(100,220,255,0.04);
+}
+.db-table tr:hover td { background: rgba(100,220,255,0.025); }
+.tag {
+  font-size: 0.58rem; letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+.t-blue { background: rgba(100,220,255,0.1); color: var(--cyan); }
+.t-green { background: rgba(61,255,176,0.1); color: var(--green); }
+.t-red { background: rgba(255,77,106,0.1); color: var(--red); }
+.t-yellow { background: rgba(255,210,77,0.1); color: var(--yellow); }
+
+/* ── WEBSOCKET PANEL ── */
+.ws-msgs { display: flex; flex-direction: column; gap: 6px; max-height: 170px; overflow-y: auto; }
+.ws-msgs::-webkit-scrollbar { width: 3px; }
+.ws-msgs::-webkit-scrollbar-thumb { background: var(--dim); }
+.ws-msg {
+  padding: 6px 10px;
+  border-left: 2px solid var(--cyan);
+  background: rgba(100,220,255,0.04);
+  font-size: 0.65rem;
+  color: var(--text);
+  opacity: 0;
+  animation: slideIn 0.3s ease forwards;
+}
+.ws-msg.out { border-left-color: var(--green); background: rgba(61,255,176,0.04); }
+.ws-msg.err { border-left-color: var(--red); background: rgba(255,77,106,0.04); }
+@keyframes slideIn { from { opacity:0; transform: translateX(-6px); } to { opacity:1; transform: none; } }
+.ws-dir { font-size: 0.58rem; letter-spacing: 1px; margin-right: 8px; }
+.ws-in { color: var(--cyan); }
+.ws-out { color: var(--green); }
+
+/* ── QUEUE ── */
+.queue-items { display: flex; flex-direction: column; gap: 6px; }
+.q-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  background: rgba(100,220,255,0.03);
+  border: 1px solid var(--border);
+  font-size: 0.65rem;
+}
+.q-bar-wrap { flex: 1; height: 3px; background: var(--dim); border-radius: 2px; overflow: hidden; }
+.q-bar { height: 100%; border-radius: 2px; background: var(--cyan); transition: width 0.8s ease; }
+.q-name { min-width: 130px; color: var(--text); }
+.q-count { color: var(--text-dim); min-width: 50px; text-align: right; }
+
+/* animations */
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+.row { animation: fadeIn 0.5s ease both; }
+.row:nth-child(1){animation-delay:0.05s}
+.row:nth-child(2){animation-delay:0.1s}
+.row:nth-child(3){animation-delay:0.15s}
+.row:nth-child(4){animation-delay:0.2s}
+.row:nth-child(5){animation-delay:0.25s}
+
+@media(max-width:1100px){
+  .row-4{grid-template-columns:repeat(2,1fr)}
+  .row-3{grid-template-columns:1fr 1fr}
+  .row-2-1,.row-1-2{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .row-2,.row-3,.row-4{grid-template-columns:1fr}
+}
+.page { animation: fadeIn 0.25s ease both; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOPBAR with menu toggle -->
+  <div class="topbar">
+    <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
+    <div class="topbar-logo">IAES<span>.</span>API</div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-path">server / <b>dashboard</b></div>
+    <div class="topbar-right">
+      <div class="uptime-badge">● UPTIME: <span id="uptimeDisp">00:00:00</span></div>
+      <div class="server-time" id="clock">--:--:--</div>
+      <button class="alert-btn">ALERTS <span class="alert-dot"></span></button>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')"><span class="icon">⚡</span> Dashboard</div>
+      <div class="nav-item" data-page="api" onclick="navigate('api')"><span class="icon">🔌</span> API Routes <span class="nav-badge green">12</span></div>
+      <div class="nav-item" data-page="database" onclick="navigate('database')"><span class="icon">🗄️</span> Database</div>
+      <div class="nav-item" data-page="websockets" onclick="navigate('websockets')"><span class="icon">📡</span> WebSockets <span class="nav-badge green">5</span></div>
+      <div class="nav-item" data-page="queue" onclick="navigate('queue')"><span class="icon">📋</span> Task Queue</div>
+      <div class="nav-item" data-page="auth" onclick="navigate('auth')"><span class="icon">🔒</span> Auth / JWT</div>
+      <div class="nav-item" data-page="errors" onclick="navigate('errors')"><span class="icon">⚠️</span> Errors <span class="nav-badge">3</span></div>
+      <div class="nav-item" data-page="analytics" onclick="navigate('analytics')"><span class="icon">📊</span> Analytics</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Server Health</div>
+      <div class="sidebar-health">
+        <div class="health-item">
+          <div class="health-name">CPU USAGE</div>
+          <div class="health-val" id="scpu">--</div>
+          <div class="health-bar-wrap"><div class="health-bar hb-cyan" id="scpuBar" style="width:0%"></div></div>
+        </div>
+        <div class="health-item">
+          <div class="health-name">MEMORY</div>
+          <div class="health-val" id="smem">--</div>
+          <div class="health-bar-wrap"><div class="health-bar hb-green" id="smemBar" style="width:0%"></div></div>
+        </div>
+        <div class="health-item">
+          <div class="health-name">DISK I/O</div>
+          <div class="health-val" id="sdisk">--</div>
+          <div class="health-bar-wrap"><div class="health-bar hb-cyan" id="sdiskBar" style="width:0%"></div></div>
+        </div>
+        <div class="health-item">
+          <div class="health-name">DB CONNECTIONS</div>
+          <div class="health-val" id="sdb">--</div>
+          <div class="health-bar-wrap"><div class="health-bar hb-green" id="sdbBar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Services</div>
+      <div class="nav-item"><span class="icon" style="color:var(--green)">●</span> FastAPI :8000</div>
+      <div class="nav-item"><span class="icon" style="color:var(--green)">●</span> PostgreSQL :5432</div>
+      <div class="nav-item"><span class="icon" style="color:var(--green)">●</span> Redis :6379</div>
+      <div class="nav-item"><span class="icon" style="color:var(--yellow)">●</span> MQTT :1883</div>
+      <div class="nav-item"><span class="icon" style="color:var(--green)">●</span> WebSocket :8080</div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main" id="mainContent">
+  <!-- PAGE: dashboard -->
+  <div id="page-dashboard" class="page">
+
+    <!-- Row 1: Metric Cards -->
+    <div class="row row-4">
+      <div class="metric-card mc-cyan">
+        <div class="mc-label">Requests / sec</div>
+        <div class="mc-val" id="rps">--</div>
+        <div class="mc-sub">HTTP + WebSocket</div>
+        <div class="mc-trend up" id="rpsTrend">▲ --</div>
+      </div>
+      <div class="metric-card mc-green">
+        <div class="mc-label">Active Connections</div>
+        <div class="mc-val" id="conns">--</div>
+        <div class="mc-sub">across all services</div>
+        <div class="mc-trend up" id="connTrend">▲ --</div>
+      </div>
+      <div class="metric-card mc-yellow">
+        <div class="mc-label">Avg Response</div>
+        <div class="mc-val" id="avgRes">--</div>
+        <div class="mc-sub">milliseconds</div>
+        <div class="mc-trend" id="resTrend">-- ms</div>
+      </div>
+      <div class="metric-card mc-red">
+        <div class="mc-label">Error Rate</div>
+        <div class="mc-val" id="errRate">--</div>
+        <div class="mc-sub">last 5 minutes</div>
+        <div class="mc-trend dn" id="errTrend">▼ --</div>
+      </div>
+    </div>
+
+    <!-- Row 2: Traffic Chart + API Routes -->
+    <div class="row row-2-1">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">// <b>TRAFFIC</b> — Request Rate Over Time</span>
+          <button class="panel-action">EXPORT</button>
+        </div>
+        <div class="panel-body">
+          <canvas id="trafficChart" height="120"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">// <b>RESPONSE</b> Distribution</span>
+        </div>
+        <div class="panel-body">
+          <canvas id="distChart" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: API Table -->
+    <div class="row">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">// <b>API</b> Endpoints — Live Status</span>
+          <button class="panel-action">+ ADD ROUTE</button>
+        </div>
+        <div class="panel-body" style="padding:0 0 4px">
+          <table class="api-table">
+            <thead><tr>
+              <th>METHOD</th><th>ENDPOINT</th><th>MODULE</th>
+              <th>STATUS</th><th>LATENCY</th><th>CALLS/MIN</th>
+            </tr></thead>
+            <tbody id="apiTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: Terminal + WebSocket -->
+    <div class="row row-2">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">// <b>SERVER</b> Log — stdout</span>
+          <button class="panel-action" onclick="clearTerminal()">CLEAR</button>
+        </div>
+        <div class="terminal" id="terminal"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">// <b>WEBSOCKET</b> Stream</span>
+          <span style="font-size:0.6rem;color:var(--green)">● 5 CLIENTS</span>
+        </div>
+        <div class="panel-body">
+          <div class="ws-msgs" id="wsMsgs"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 5: DB + Queue -->
+    <div class="row row-2">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">// <b>DATABASE</b> — Recent Queries</span>
+          <button class="panel-action">VIEW ALL</button>
+        </div>
+        <div class="panel-body" style="padding:0 0 4px">
+          <table class="db-table">
+            <thead><tr>
+              <th>TABLE</th><th>OPERATION</th><th>DURATION</th><th>STATUS</th>
+            </tr></thead>
+            <tbody id="dbTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">// <b>TASK QUEUE</b> — Redis</span>
+          <button class="panel-action">FLUSH</button>
+        </div>
+        <div class="panel-body">
+          <div class="queue-items" id="queueItems"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-dashboard -->
+
+  <!-- PAGE: api (hidden by default) -->
+  <div id="page-api" class="page" style="display:none">
+    <div class="row"><div class="panel">
+      <div class="panel-head"><span class="panel-title">// <b>API ROUTES</b> — Full Registry</span><button class="panel-action">+ ADD ROUTE</button></div>
+      <div class="panel-body" style="padding:0 0 4px">
+        <table class="api-table"><thead><tr><th>METHOD</th><th>ENDPOINT</th><th>MODULE</th><th>AUTH</th><th>STATUS</th><th>LATENCY</th><th>CALLS/MIN</th></tr></thead>
+        <tbody id="apiFullBody"></tbody></table>
+      </div>
+    </div></div>
+    <div class="row row-2">
+      <div class="panel"><div class="panel-head"><span class="panel-title">// <b>RATE LIMITING</b></span></div>
+        <div class="panel-body" id="rateLimitPanel"></div></div>
+      <div class="panel"><div class="panel-head"><span class="panel-title">// <b>MIDDLEWARE</b> Stack</span></div>
+        <div class="panel-body" id="middlewarePanel"></div></div>
+    </div>
+  </div>
+
+  <!-- PAGE: database -->
+  <div id="page-database" class="page" style="display:none">
+    <div class="row row-3">
+      <div class="metric-card mc-cyan"><div class="mc-label">Total Records</div><div class="mc-val">2.4M</div><div class="mc-sub">across 8 tables</div></div>
+      <div class="metric-card mc-green"><div class="mc-label">Query Speed</div><div class="mc-val" id="dbSpeed">--</div><div class="mc-sub">avg ms</div></div>
+      <div class="metric-card mc-yellow"><div class="mc-label">Pool Usage</div><div class="mc-val" id="dbPool">--</div><div class="mc-sub">connections</div></div>
+    </div>
+    <div class="row"><div class="panel">
+      <div class="panel-head"><span class="panel-title">// <b>TABLES</b> — Schema Overview</span></div>
+      <div class="panel-body" style="padding:0 0 4px"><table class="db-table">
+        <thead><tr><th>TABLE</th><th>ROWS</th><th>SIZE</th><th>LAST WRITE</th><th>INDEX</th></tr></thead>
+        <tbody id="schemaBody"></tbody>
+      </table></div>
+    </div></div>
+    <div class="row"><div class="panel">
+      <div class="panel-head"><span class="panel-title">// <b>LIVE QUERIES</b> — Activity</span></div>
+      <div class="panel-body" style="padding:0 0 4px"><table class="db-table">
+        <thead><tr><th>PID</th><th>QUERY</th><th>STATE</th><th>DURATION</th></tr></thead>
+        <tbody id="liveQueryBody"></tbody>
+      </table></div>
+    </div></div>
+  </div>
+
+  <!-- PAGE: websockets -->
+  <div id="page-websockets" class="page" style="display:none">
+    <div class="row row-4">
+      <div class="metric-card mc-cyan"><div class="mc-label">Connected Clients</div><div class="mc-val" id="wsClients">5</div></div>
+      <div class="metric-card mc-green"><div class="mc-label">Messages / sec</div><div class="mc-val" id="wsMps">--</div></div>
+      <div class="metric-card mc-yellow"><div class="mc-label">Avg Payload</div><div class="mc-val">284<span style="font-size:1rem">B</span></div></div>
+      <div class="metric-card mc-red"><div class="mc-label">Dropped</div><div class="mc-val" id="wsDropped">0</div></div>
+    </div>
+    <div class="row row-2">
+      <div class="panel"><div class="panel-head"><span class="panel-title">// <b>CLIENTS</b> Connected</span></div>
+        <div class="panel-body"><div id="wsClientList"></div></div></div>
+      <div class="panel"><div class="panel-head"><span class="panel-title">// <b>LIVE STREAM</b></span><span style="font-size:0.6rem;color:var(--green)">● LIVE</span></div>
+        <div class="panel-body"><div class="ws-msgs" id="wsMsgs2" style="max-height:260px"></div></div></div>
+    </div>
+  </div>
+
+  <!-- PAGE: queue -->
+  <div id="page-queue" class="page" style="display:none">
+    <div class="row row-3">
+      <div class="metric-card mc-cyan"><div class="mc-label">Total Queued</div><div class="mc-val" id="totalQ">--</div></div>
+      <div class="metric-card mc-green"><div class="mc-label">Processed / min</div><div class="mc-val" id="procQ">--</div></div>
+      <div class="metric-card mc-red"><div class="mc-label">Failed Jobs</div><div class="mc-val" id="failQ">--</div></div>
+    </div>
+    <div class="row"><div class="panel">
+      <div class="panel-head"><span class="panel-title">// <b>QUEUES</b> — Redis Status</span><button class="panel-action">FLUSH ALL</button></div>
+      <div class="panel-body"><div id="queueFull"></div></div>
+    </div></div>
+    <div class="row"><div class="panel">
+      <div class="panel-head"><span class="panel-title">// <b>WORKERS</b></span></div>
+      <div class="panel-body"><div id="workerList"></div></div>
+    </div></div>
+  </div>
+
+  <!-- PAGE: auth -->
+  <div id="page-auth" class="page" style="display:none">
+    <div class="row row-3">
+      <div class="metric-card mc-green"><div class="mc-label">Active Tokens</div><div class="mc-val">247</div></div>
+      <div class="metric-card mc-yellow"><div class="mc-label">Expiring Soon</div><div class="mc-val">12</div></div>
+      <div class="metric-card mc-red"><div class="mc-label">Revoked</div><div class="mc-val">3</div></div>
+    </div>
+    <div class="row row-2">
+      <div class="panel"><div class="panel-head"><span class="panel-title">// <b>JWT CONFIG</b></span></div>
+        <div class="panel-body"><div id="jwtConfig"></div></div></div>
+      <div class="panel"><div class="panel-head"><span class="panel-title">// <b>RECENT LOGINS</b></span></div>
+        <div class="panel-body" style="padding:0 0 4px"><table class="db-table">
+          <thead><tr><th>USER</th><th>IP</th><th>TIME</th><th>STATUS</th></tr></thead>
+          <tbody id="loginBody"></tbody>
+        </table></div></div>
+    </div>
+  </div>
+
+  <!-- PAGE: errors -->
+  <div id="page-errors" class="page" style="display:none">
+    <div class="row row-3">
+      <div class="metric-card mc-red"><div class="mc-label">Errors (1h)</div><div class="mc-val" id="err1h">--</div></div>
+      <div class="metric-card mc-yellow"><div class="mc-label">Warnings (1h)</div><div class="mc-val" id="warn1h">--</div></div>
+      <div class="metric-card mc-cyan"><div class="mc-label">Resolved</div><div class="mc-val">18</div></div>
+    </div>
+    <div class="row"><div class="panel">
+      <div class="panel-head"><span class="panel-title">// <b>ERROR LOG</b></span><button class="panel-action">CLEAR ALL</button></div>
+      <div class="terminal" id="errorTerminal" style="height:300px"></div>
+    </div></div>
+  </div>
+
+  <!-- PAGE: analytics -->
+  <div id="page-analytics" class="page" style="display:none">
+    <div class="row row-4">
+      <div class="metric-card mc-cyan"><div class="mc-label">Total Requests (24h)</div><div class="mc-val">1.2M</div></div>
+      <div class="metric-card mc-green"><div class="mc-label">Unique Agents</div><div class="mc-val">24</div></div>
+      <div class="metric-card mc-yellow"><div class="mc-label">Data Ingested</div><div class="mc-val">18<span style="font-size:1rem">GB</span></div></div>
+      <div class="metric-card mc-red"><div class="mc-label">Anomalies</div><div class="mc-val">2</div></div>
+    </div>
+    <div class="row row-2">
+      <div class="panel"><div class="panel-head"><span class="panel-title">// <b>TOP ENDPOINTS</b></span></div>
+        <div class="panel-body"><div id="topEndpoints"></div></div></div>
+      <div class="panel"><div class="panel-head"><span class="panel-title">// <b>TRAFFIC</b> by Hour</span></div>
+        <div class="panel-body"><canvas id="analyticsChart" height="140"></canvas></div></div>
+    </div>
+  </div>
+
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// ── Global interval management ──
+const intervalIds = [];
+function setSafeInterval(fn, delay) {
+  const id = setInterval(fn, delay);
+  intervalIds.push(id);
+  return id;
+}
+// Clear all intervals on page unload (optional)
+window.addEventListener('beforeunload', () => {
+  intervalIds.forEach(clearInterval);
+});
+
+// ── Mobile sidebar toggle ──
+const menuToggle = document.getElementById('menuToggle');
+const sidebar = document.getElementById('sidebar');
+menuToggle.addEventListener('click', () => {
+  sidebar.classList.toggle('active');
+});
+
+// ── Clock & Uptime ──
+const startTime = Date.now();
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toTimeString().slice(0,8);
+  const up = Math.floor((Date.now()-startTime)/1000);
+  const h = String(Math.floor(up/3600)).padStart(2,'0');
+  const m = String(Math.floor((up%3600)/60)).padStart(2,'0');
+  const s = String(up%60).padStart(2,'0');
+  document.getElementById('uptimeDisp').textContent = `${h}:${m}:${s}`;
+}
+setSafeInterval(updateClock, 1000); updateClock();
+
+// ── Sidebar health ──
+function updateSidebar() {
+  const cpu = (35+Math.random()*45).toFixed(1);
+  const mem = (48+Math.random()*30).toFixed(1);
+  const disk = (20+Math.random()*50).toFixed(1);
+  const db = Math.floor(8+Math.random()*18);
+  document.getElementById('scpu').textContent = cpu+'%';
+  document.getElementById('smem').textContent = mem+'%';
+  document.getElementById('sdisk').textContent = disk+'%';
+  document.getElementById('sdb').textContent = db+'/32';
+  document.getElementById('scpuBar').style.width = cpu+'%';
+  document.getElementById('smemBar').style.width = mem+'%';
+  document.getElementById('sdiskBar').style.width = disk+'%';
+  document.getElementById('sdbBar').style.width = (db/32*100)+'%';
+}
+updateSidebar(); setSafeInterval(updateSidebar, 2000);
+
+// ── Metric cards ──
+let prevRps = 340;
+function updateMetrics() {
+  const rps = Math.floor(280+Math.random()*200);
+  const conns = Math.floor(40+Math.random()*60);
+  const res = Math.floor(4+Math.random()*18);
+  const err = (Math.random()*2).toFixed(2);
+  const diff = rps - prevRps; prevRps = rps;
+  document.getElementById('rps').textContent = rps;
+  document.getElementById('conns').textContent = conns;
+  document.getElementById('avgRes').textContent = res+'ms';
+  document.getElementById('errRate').textContent = err+'%';
+  const rpsTr = document.getElementById('rpsTrend');
+  rpsTr.textContent = (diff>=0?'▲ +':'▼ ')+diff+' /s';
+  rpsTr.className = 'mc-trend '+(diff>=0?'up':'dn');
+  document.getElementById('connTrend').textContent = '▲ ' + conns + ' live';
+  const resTr = document.getElementById('resTrend');
+  resTr.textContent = res < 10 ? '● fast' : res < 20 ? '● nominal' : '▲ slow';
+  resTr.className = 'mc-trend '+(res<10?'up':res<20?'':'dn');
+  document.getElementById('errTrend').textContent = err<1?'▼ healthy':'▲ elevated';
+}
+updateMetrics(); setSafeInterval(updateMetrics, 1800);
+
+// ── Traffic Chart ──
+const tc = document.getElementById('trafficChart');
+const tctx = tc.getContext('2d');
+let trafficData = Array.from({length:60}, () => Math.floor(200+Math.random()*300));
+function drawTrafficChart() {
+  if (!tc.parentElement) return;
+  tc.width = tc.parentElement.offsetWidth - 32; tc.height = 120;
+  const w = tc.width, h = tc.height;
+  const max = Math.max(...trafficData) * 1.15;
+  tctx.clearRect(0,0,w,h);
+  // Grid
+  tctx.strokeStyle = 'rgba(100,220,255,0.05)'; tctx.lineWidth = 1;
+  for(let i=0;i<4;i++){
+    const y = h*(i/4);
+    tctx.beginPath(); tctx.moveTo(0,y); tctx.lineTo(w,y); tctx.stroke();
+  }
+  // Fill gradient
+  const grad = tctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'rgba(100,220,255,0.18)');
+  grad.addColorStop(1,'rgba(100,220,255,0)');
+  tctx.beginPath();
+  trafficData.forEach((v,i) => {
+    const x = i/59*w, y = h - v/max*h;
+    i===0 ? tctx.moveTo(x,y) : tctx.lineTo(x,y);
+  });
+  tctx.lineTo(w,h); tctx.lineTo(0,h); tctx.closePath();
+  tctx.fillStyle = grad; tctx.fill();
+  // Line
+  tctx.beginPath();
+  trafficData.forEach((v,i) => {
+    const x = i/59*w, y = h - v/max*h;
+    i===0 ? tctx.moveTo(x,y) : tctx.lineTo(x,y);
+  });
+  tctx.strokeStyle = 'rgba(100,220,255,0.85)'; tctx.lineWidth = 1.5; tctx.stroke();
+  // Last dot
+  const lx = w, ly = h - trafficData[59]/max*h;
+  tctx.beginPath(); tctx.arc(lx,ly,4,0,Math.PI*2);
+  tctx.fillStyle = '#64dcff'; tctx.fill();
+}
+setSafeInterval(() => {
+  trafficData.shift(); trafficData.push(Math.floor(200+Math.random()*300));
+  drawTrafficChart();
+}, 800);
+drawTrafficChart();
+
+// ── Distribution Chart (donut) ──
+const dc = document.getElementById('distChart');
+const dctx = dc.getContext('2d');
+function drawDist() {
+  if (!dc.parentElement) return;
+  dc.width = dc.parentElement.offsetWidth - 32; dc.height = 120;
+  const cx = dc.width/2, cy = dc.height/2, r = Math.min(cx,cy)-14;
+  dctx.clearRect(0,0,dc.width,dc.height);
+  const slices = [
+    {val:62, color:'#64dcff', label:'2xx'},
+    {val:22, color:'#3dffb0', label:'3xx'},
+    {val:10, color:'#ffd24d', label:'4xx'},
+    {val:6, color:'#ff4d6a', label:'5xx'},
+  ];
+  let start = -Math.PI/2;
+  slices.forEach(s => {
+    const angle = (s.val/100)*Math.PI*2;
+    dctx.beginPath();
+    dctx.moveTo(cx,cy);
+    dctx.arc(cx,cy,r,start,start+angle);
+    dctx.closePath();
+    dctx.fillStyle = s.color+'22';
+    dctx.fill();
+    dctx.beginPath();
+    dctx.arc(cx,cy,r,start,start+angle);
+    dctx.strokeStyle = s.color;
+    dctx.lineWidth = 3; dctx.stroke();
+    // label
+    const mid = start + angle/2;
+    const lx = cx + (r+16)*Math.cos(mid);
+    const ly = cy + (r+16)*Math.sin(mid);
+    dctx.fillStyle = s.color;
+    dctx.font = '600 9px JetBrains Mono';
+    dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
+    dctx.fillText(s.label, lx, ly);
+    start += angle;
+  });
+  // Center text
+  dctx.fillStyle = '#c8dff0';
+  dctx.font = 'bold 14px Syne';
+  dctx.textAlign = 'center'; dctx.textBaseline = 'middle';
+  dctx.fillText('62%', cx, cy-7);
+  dctx.fillStyle = '#4a6070';
+  dctx.font = '9px JetBrains Mono';
+  dctx.fillText('success', cx, cy+8);
+}
+drawDist();
+
+// ── API Table ──
+const apiRoutes = [
+  { method:'GET',  path:'/api/v1/agents',        module:'AgentCore',    status:'ok',   lat:4,  cpm:482 },
+  { method:'POST', path:'/api/v1/agents/command', module:'AgentCore',    status:'ok',   lat:11, cpm:127 },
+  { method:'GET',  path:'/api/v1/sensors/stream', module:'Perception',   status:'ok',   lat:3,  cpm:1840},
+  { method:'POST', path:'/api/v1/decision/plan',  module:'DecisionCore', status:'ok',   lat:18, cpm:233 },
+  { method:'WS',   path:'/ws/telemetry',          module:'Telemetry',    status:'ok',   lat:2,  cpm:9200},
+  { method:'GET',  path:'/api/v1/swarm/state',    module:'SwarmMgr',     status:'warn', lat:42, cpm:88  },
+  { method:'POST', path:'/api/v1/auth/token',     module:'Auth',         status:'ok',   lat:7,  cpm:34  },
+  { method:'DEL',  path:'/api/v1/agents/:id',     module:'AgentCore',    status:'err',  lat:0,  cpm:2   },
+];
+function renderAPITable() {
+  const tbody = document.getElementById('apiTableBody');
+  tbody.innerHTML = apiRoutes.map(r => {
+    const mClass = r.method==='GET'?'m-get':r.method==='POST'?'m-post':r.method==='WS'?'m-ws':'m-del';
+    const dotClass = r.status==='ok'?'ep-ok':r.status==='warn'?'ep-warn':'ep-err';
+    const latW = Math.min(r.lat/50*80,80);
+    const cpm = r.cpm + Math.floor((Math.random()-0.5)*30);
+    return `<tr>
+      <td><span class="method ${mClass}">${r.method}</span></td>
+      <td><span class="endpoint-path">${r.path}</span></td>
+      <td style="color:var(--text-dim)">${r.module}</td>
+      <td><span class="ep-status ${dotClass}"></span>${r.status.toUpperCase()}</td>
+      <td>
+        <div class="latency-bar">
+          <span style="min-width:36px;color:${r.lat>30?'var(--yellow)':'var(--cyan)'}">${r.lat}ms</span>
+          <div class="lat-fill" style="width:${latW}px"></div>
+        </div>
+      </td>
+      <td style="color:var(--text-dim)">${cpm}</td>
+    </tr>`;
+  }).join('');
+}
+renderAPITable(); setSafeInterval(renderAPITable, 2500);
+
+// ── Terminal Log ──
+const termLines = [
+  ['ok','INFO','Server started on 0.0.0.0:8000'],
+  ['info','INFO','PostgreSQL pool initialized — 32 connections'],
+  ['info','INFO','Redis connected at localhost:6379'],
+  ['ok','INFO','AgentCore module loaded'],
+  ['info','INFO','WebSocket server ready on :8080'],
+  ['warn','WARN','SwarmMgr latency degraded: 42ms avg'],
+  ['ok','INFO','JWT auth middleware active'],
+  ['info','INFO','MQTT broker handshake ok'],
+  ['err','ERROR','Agent-08 command timeout — retrying (1/3)'],
+  ['ok','INFO','Swarm rebalance task enqueued'],
+  ['info','INFO','Sensor stream: 1840 events/min ingested'],
+  ['warn','WARN','DB pool near capacity: 29/32 connections'],
+  ['ok','INFO','Decision plan computed in 16.2ms'],
+  ['info','INFO','Cache hit rate: 87.4%'],
+  ['err','ERROR','Agent-08 command timeout — retrying (2/3)'],
+  ['ok','INFO','Agent-08 recovered — connection restored'],
+  ['info','INFO','Telemetry snapshot saved to DB'],
+];
+let termIdx = 0;
+const term = document.getElementById('terminal');
+function addTermLine() {
+  const [cls, level, msg] = termLines[termIdx % termLines.length];
+  const now = new Date().toTimeString().slice(0,8);
+  const lClass = cls==='ok'?'lv-ok':cls==='warn'?'lv-warn':cls==='err'?'lv-err':'lv-info';
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-ts">${now}</span><span class="log-level ${lClass}">${level}</span><span class="log-msg">${msg}</span>`;
+  term.appendChild(line);
+  term.scrollTop = term.scrollHeight;
+  termIdx++;
+}
+for(let i=0;i<8;i++) addTermLine();
+setSafeInterval(addTermLine, 1600);
+function clearTerminal() { term.innerHTML = ''; }
+
+// ── WebSocket Messages ──
+const wsMsgPool = [
+  ['in', '{"type":"sensor","agentId":"A03","value":{"lidar":0.82,"imu":[0.1,0.2,-9.8]}}'],
+  ['out','{"type":"command","agentId":"A03","action":"move","target":[14.2,-8.1]}'],
+  ['in', '{"type":"ack","agentId":"A03","status":"executing"}'],
+  ['in', '{"type":"telemetry","agentId":"A07","battery":0.72,"pos":[10.1,4.3]}'],
+  ['out','{"type":"broadcast","action":"rebalance","swarmId":"alpha"}'],
+  ['in', '{"type":"sensor","agentId":"A01","value":{"camera":"obstacle_detected"}}'],
+  ['err','{"type":"error","code":408,"msg":"agent_timeout","agentId":"A08"}'],
+  ['in', '{"type":"telemetry","agentId":"A12","battery":0.91,"pos":[2.0,7.5]}'],
+  ['out','{"type":"mission_update","segment":5,"waypoints":["W14","W15","W16"]}'],
+];
+let wsIdx = 0;
+const wsMsgsEl = document.getElementById('wsMsgs');
+function addWsMsg() {
+  const [dir, msg] = wsMsgPool[wsIdx % wsMsgPool.length];
+  const el = document.createElement('div');
+  el.className = 'ws-msg' + (dir==='out'?' out':dir==='err'?' err':'');
+  el.innerHTML = `<span class="ws-dir ${dir==='in'?'ws-in':'ws-out'}">${dir==='in'?'← IN':'→ OUT'}</span>${msg.length>70?msg.slice(0,70)+'…':msg}`;
+  wsMsgsEl.appendChild(el);
+  while(wsMsgsEl.children.length > 8) wsMsgsEl.removeChild(wsMsgsEl.firstChild);
+  wsIdx++;
+}
+setSafeInterval(addWsMsg, 1200); addWsMsg();
+
+// ── DB Table ──
+const dbOps = [
+  ['agents','SELECT','2.1ms','ok'],
+  ['sensor_logs','INSERT','3.4ms','ok'],
+  ['decisions','INSERT','4.0ms','ok'],
+  ['swarm_state','UPDATE','6.7ms','ok'],
+  ['agents','SELECT','1.8ms','ok'],
+  ['telemetry','INSERT','2.9ms','ok'],
+  ['tasks','DELETE','1.2ms','ok'],
+  ['agents','UPDATE','38ms','warn'],
+  ['sensor_logs','SELECT','5.1ms','ok'],
+  ['decisions','SELECT','3.3ms','ok'],
+];
+let dbIdx = 0;
+function updateDBTable() {
+  const tbody = document.getElementById('dbTableBody');
+  const rows = [];
+  for(let i=0;i<6;i++) {
+    const [tbl, op, dur, st] = dbOps[(dbIdx+i) % dbOps.length];
+    const tagClass = op==='SELECT'?'t-blue':op==='INSERT'?'t-green':op==='UPDATE'?'t-yellow':'t-red';
+    const stClass = st==='ok'?'t-green':'t-yellow';
+    rows.push(`<tr>
+      <td style="color:var(--cyan)">${tbl}</td>
+      <td><span class="tag ${tagClass}">${op}</span></td>
+      <td style="color:${parseFloat(dur)>10?'var(--yellow)':'var(--text-dim)'}">${dur}</td>
+      <td><span class="tag ${stClass}">${st.toUpperCase()}</span></td>
+    </tr>`);
+  }
+  tbody.innerHTML = rows.join('');
+  dbIdx++;
+}
+updateDBTable(); setSafeInterval(updateDBTable, 2000);
+
+// ── Task Queue ──
+const queues = [
+  { name:'agent:command:queue', max:500 },
+  { name:'sensor:ingest:queue', max:2000 },
+  { name:'decision:plan:queue', max:300 },
+  { name:'telemetry:save:queue', max:1000 },
+  { name:'swarm:broadcast:queue', max:200 },
+];
+function updateQueues() {
+  const el = document.getElementById('queueItems');
+  el.innerHTML = queues.map(q => {
+    const count = Math.floor(Math.random()*q.max*0.7);
+    const pct = count/q.max*100;
+    const color = pct>75?'var(--red)':pct>50?'var(--yellow)':'var(--cyan)';
+    return `<div class="q-item">
+      <span class="q-name">${q.name}</span>
+      <div class="q-bar-wrap"><div class="q-bar" style="width:${pct}%;background:${color}"></div></div>
+      <span class="q-count">${count}</span>
+    </div>`;
+  }).join('');
+}
+updateQueues(); setSafeInterval(updateQueues, 1500);
+
+// ── NAVIGATION with interval cleanup ──
+let currentPageIntervals = [];
+function navigate(page) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  // Remove active class from nav items
+  document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
+  // Show selected page
+  document.getElementById('page-' + page).style.display = '';
+  const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if(navEl) navEl.classList.add('active');
+  // Update topbar path
+  const labels = {dashboard:'dashboard',api:'api-routes',database:'database',websockets:'websockets',queue:'task-queue',auth:'auth',errors:'errors',analytics:'analytics'};
+  document.querySelector('.topbar-path').innerHTML = `server / <b>${labels[page]||page}</b>`;
+
+  // Clear any previous page-specific intervals (if we had them, but we use global safe intervals)
+  // For now, just call init functions that may set additional intervals (but they use setSafeInterval)
+  if(page==='api') initAPIPage();
+  if(page==='database') initDBPage();
+  if(page==='websockets') initWSPage();
+  if(page==='queue') initQueuePage();
+  if(page==='auth') initAuthPage();
+  if(page==='errors') initErrorsPage();
+  if(page==='analytics') initAnalyticsPage();
+
+  // Close mobile sidebar after navigation
+  if (window.innerWidth <= 700) {
+    sidebar.classList.remove('active');
+  }
+}
+
+// ── API PAGE ──
+function initAPIPage() {
+  const allRoutes = [
+    {method:'GET', path:'/api/v1/agents', module:'AgentCore', auth:'JWT', status:'ok', lat:4, cpm:482},
+    {method:'POST',path:'/api/v1/agents/command',module:'AgentCore',auth:'JWT',status:'ok',lat:11,cpm:127},
+    {method:'GET', path:'/api/v1/sensors/stream',module:'Perception',auth:'API_KEY',status:'ok',lat:3,cpm:1840},
+    {method:'POST',path:'/api/v1/decision/plan',module:'DecisionCore',auth:'JWT',status:'ok',lat:18,cpm:233},
+    {method:'WS',  path:'/ws/telemetry',module:'Telemetry',auth:'TOKEN',status:'ok',lat:2,cpm:9200},
+    {method:'GET', path:'/api/v1/swarm/state',module:'SwarmMgr',auth:'JWT',status:'warn',lat:42,cpm:88},
+    {method:'POST',path:'/api/v1/auth/token',module:'Auth',auth:'NONE',status:'ok',lat:7,cpm:34},
+    {method:'DEL', path:'/api/v1/agents/:id',module:'AgentCore',auth:'JWT',status:'err',lat:0,cpm:2},
+    {method:'GET', path:'/api/v1/health',module:'Core',auth:'NONE',status:'ok',lat:1,cpm:600},
+    {method:'POST',path:'/api/v1/swarm/broadcast',module:'SwarmMgr',auth:'JWT',status:'ok',lat:9,cpm:55},
+    {method:'GET', path:'/api/v1/logs',module:'Logger',auth:'JWT',status:'ok',lat:14,cpm:20},
+    {method:'POST',path:'/api/v1/mission/update',module:'MissionCtrl',auth:'JWT',status:'ok',lat:22,cpm:15},
+  ];
+  document.getElementById('apiFullBody').innerHTML = allRoutes.map(r => {
+    const mClass = r.method==='GET'?'m-get':r.method==='POST'?'m-post':r.method==='WS'?'m-ws':'m-del';
+    const dotClass = r.status==='ok'?'ep-ok':r.status==='warn'?'ep-warn':'ep-err';
+    return `<tr>
+      <td><span class="method ${mClass}">${r.method}</span></td>
+      <td><span class="endpoint-path">${r.path}</span></td>
+      <td style="color:var(--text-dim)">${r.module}</td>
+      <td><span class="tag t-blue">${r.auth}</span></td>
+      <td><span class="ep-status ${dotClass}"></span>${r.status.toUpperCase()}</td>
+      <td style="color:${r.lat>30?'var(--yellow)':'var(--cyan)'}">${r.lat}ms</td>
+      <td style="color:var(--text-dim)">${r.cpm}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('rateLimitPanel').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${[['Default','100 req/min','t-green'],['Sensor Stream','500 req/min','t-blue'],['Auth Endpoint','10 req/min','t-yellow'],['Admin Routes','50 req/min','t-blue']].map(([name,lim,cls])=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text);font-size:0.72rem">${name}</span>
+        <span class="tag ${cls}">${lim}</span>
+      </div>`).join('')}
+    </div>`;
+
+  document.getElementById('middlewarePanel').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${[['CORS Handler','active'],['JWT Validator','active'],['Rate Limiter','active'],['Request Logger','active'],['Error Handler','active'],['Response Compress','active']].map(([name,st],i)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-dim);font-size:0.65rem;min-width:20px">${i+1}.</span>
+        <span style="color:var(--text);font-size:0.72rem;flex:1">${name}</span>
+        <span class="ep-status ep-ok"></span>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ── DATABASE PAGE ──
+function initDBPage() {
+  const tables = [
+    ['agents','24,831','4.2 MB','just now','3 indexes'],
+    ['sensor_logs','1,284,920','312 MB','0.3s ago','2 indexes'],
+    ['decisions','98,441','18 MB','1s ago','2 indexes'],
+    ['swarm_state','12','8 KB','2s ago','1 index'],
+    ['telemetry','840,200','220 MB','0.2s ago','2 indexes'],
+    ['tasks','5,502','1.1 MB','1s ago','1 index'],
+    ['users','247','64 KB','10m ago','2 indexes'],
+    ['mission_logs','3,400','800 KB','5s ago','1 index'],
+  ];
+  document.getElementById('schemaBody').innerHTML = tables.map(([tbl,rows,size,lw,idx])=>`
+    <tr>
+      <td style="color:var(--cyan)">${tbl}</td>
+      <td style="color:var(--text-dim)">${rows}</td>
+      <td style="color:var(--text-dim)">${size}</td>
+      <td style="color:var(--green);font-size:0.65rem">${lw}</td>
+      <td><span class="tag t-blue">${idx}</span></td>
+    </tr>`).join('');
+
+  function updateLiveQ() {
+    const queries = [
+      ['1842','SELECT * FROM agents WHERE active=true','active','1.2ms'],
+      ['1901','INSERT INTO sensor_logs (agent_id, data) VALUES (...)','active','0.9ms'],
+      ['1755','UPDATE swarm_state SET pos=... WHERE id=...','idle','0ms'],
+      ['1998','SELECT COUNT(*) FROM telemetry WHERE ts > NOW()-interval','active','3.1ms'],
+    ];
+    document.getElementById('liveQueryBody').innerHTML = queries.map(([pid,q,st,dur])=>`
+      <tr>
+        <td style="color:var(--yellow)">${pid}</td>
+        <td style="color:var(--text);max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${q}</td>
+        <td><span class="ep-status ${st==='active'?'ep-ok':'ep-idle'}" style="background:${st==='active'?'var(--green)':'var(--dim)'}"></span>${st}</td>
+        <td style="color:var(--cyan)">${dur}</td>
+      </tr>`).join('');
+    document.getElementById('dbSpeed').textContent = (Math.random()*8+1).toFixed(1)+'ms';
+    document.getElementById('dbPool').textContent = Math.floor(8+Math.random()*18)+'/32';
+  }
+  updateLiveQ(); setSafeInterval(updateLiveQ, 2000);
+}
+
+// ── WEBSOCKETS PAGE ──
+let wsPageInterval;
+function initWSPage() {
+  const clients = [
+    {id:'ws-001',agent:'Agent-03',ip:'192.168.1.103',msgs:482,state:'active'},
+    {id:'ws-002',agent:'Agent-07',ip:'192.168.1.107',msgs:310,state:'active'},
+    {id:'ws-003',agent:'Dashboard',ip:'192.168.1.50',msgs:1840,state:'active'},
+    {id:'ws-004',agent:'Agent-12',ip:'192.168.1.112',msgs:201,state:'idle'},
+    {id:'ws-005',agent:'MissionCtrl',ip:'192.168.1.10',msgs:88,state:'active'},
+  ];
+  document.getElementById('wsClientList').innerHTML = `<div style="display:flex;flex-direction:column;gap:8px">` +
+    clients.map(c=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:rgba(100,220,255,0.03);border:1px solid var(--border)">
+      <span class="ep-status ${c.state==='active'?'ep-ok':'ep-idle'}" style="background:${c.state==='active'?'var(--green)':'var(--dim)'}"></span>
+      <span style="color:var(--cyan);min-width:70px;font-size:0.7rem">${c.id}</span>
+      <span style="color:var(--text);flex:1;font-size:0.72rem">${c.agent}</span>
+      <span style="color:var(--text-dim);font-size:0.68rem">${c.ip}</span>
+      <span style="color:var(--green);font-size:0.68rem">${c.msgs} msgs</span>
+    </div>`).join('') + '</div>';
+
+  const pool2 = [
+    ['in','{"type":"telemetry","agentId":"A03","battery":0.72}'],
+    ['out','{"type":"command","agentId":"A07","action":"scan"}'],
+    ['in','{"type":"sensor","agentId":"A12","lidar":0.91}'],
+    ['out','{"type":"broadcast","swarm":"alpha","action":"hold"}'],
+    ['in','{"type":"ack","agentId":"A03","status":"ok"}'],
+  ];
+  let i2=0, el2=document.getElementById('wsMsgs2');
+  // Clear any previous interval for this page
+  if (wsPageInterval) clearInterval(wsPageInterval);
+  wsPageInterval = setSafeInterval(()=>{
+    const [dir,msg]=pool2[i2%pool2.length]; i2++;
+    const d=document.createElement('div');
+    d.className='ws-msg'+(dir==='out'?' out':'');
+    d.innerHTML=`<span class="ws-dir ${dir==='in'?'ws-in':'ws-out'}">${dir==='in'?'← IN':'→ OUT'}</span>${msg}`;
+    el2.appendChild(d);
+    while(el2.children.length>12) el2.removeChild(el2.firstChild);
+    document.getElementById('wsMps').textContent = Math.floor(80+Math.random()*60);
+  }, 900);
+}
+
+// ── QUEUE PAGE ──
+function initQueuePage() {
+  const allQueues = [
+    {name:'agent:command:queue', max:500, workers:4},
+    {name:'sensor:ingest:queue', max:2000, workers:8},
+    {name:'decision:plan:queue', max:300, workers:2},
+    {name:'telemetry:save:queue', max:1000, workers:6},
+    {name:'swarm:broadcast:queue', max:200, workers:2},
+    {name:'mission:update:queue', max:150, workers:1},
+  ];
+  function renderQ(){
+    let total=0;
+    document.getElementById('queueFull').innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">` +
+      allQueues.map(q=>{
+        const count=Math.floor(Math.random()*q.max*0.65); total+=count;
+        const pct=count/q.max*100;
+        const color=pct>75?'var(--red)':pct>50?'var(--yellow)':'var(--cyan)';
+        return `<div style="padding:12px 14px;background:rgba(100,220,255,0.03);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <span style="color:var(--text);font-size:0.72rem">${q.name}</span>
+            <span style="color:${color};font-size:0.7rem">${count} / ${q.max}</span>
+          </div>
+          <div style="height:4px;background:var(--dim);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${color};transition:width 0.8s"></div>
+          </div>
+          <div style="margin-top:6px;font-size:0.62rem;color:var(--text-dim)">${q.workers} workers active</div>
+        </div>`;
+      }).join('') + '</div>';
+    document.getElementById('totalQ').textContent = total;
+    document.getElementById('procQ').textContent = Math.floor(800+Math.random()*400);
+    document.getElementById('failQ').textContent = Math.floor(Math.random()*5);
+  }
+  renderQ(); setSafeInterval(renderQ,2000);
+
+  document.getElementById('workerList').innerHTML = `<div style="display:flex;flex-direction:column;gap:8px">` +
+    Array.from({length:6},(_,i)=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:rgba(100,220,255,0.02);border:1px solid var(--border)">
+      <span class="ep-status ep-ok"></span>
+      <span style="color:var(--cyan);font-size:0.7rem;min-width:80px">worker-${String(i+1).padStart(3,'0')}</span>
+      <span style="color:var(--text-dim);font-size:0.68rem;flex:1">processing: ${['sensor:ingest','agent:command','telemetry:save','decision:plan'][i%4]}</span>
+      <span style="color:var(--green);font-size:0.65rem">idle: ${Math.floor(Math.random()*300)}ms</span>
+    </div>`).join('') + '</div>';
+}
+
+// ── AUTH PAGE ──
+function initAuthPage() {
+  document.getElementById('jwtConfig').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${[['Algorithm','HS256'],['Token Expiry','3600s (1h)'],['Refresh Window','86400s (24h)'],['Issuer','iaes.api.local'],['Secret Rotation','Every 30 days'],['Blacklist Backend','Redis']].map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-dim);font-size:0.7rem">${k}</span>
+        <span style="color:var(--cyan);font-size:0.7rem">${v}</span>
+      </div>`).join('')}
+    </div>`;
+
+  document.getElementById('loginBody').innerHTML = [
+    ['agent-ctrl','192.168.1.10','just now','ok'],
+    ['dashboard','192.168.1.50','12s ago','ok'],
+    ['admin','10.0.0.1','2m ago','ok'],
+    ['agent-03','192.168.1.103','5m ago','ok'],
+    ['unknown','203.45.12.8','8m ago','err'],
+    ['agent-07','192.168.1.107','12m ago','ok'],
+  ].map(([user,ip,time,st])=>`
+    <tr>
+      <td style="color:var(--cyan)">${user}</td>
+      <td style="color:var(--text-dim)">${ip}</td>
+      <td style="color:var(--text-dim)">${time}</td>
+      <td><span class="tag ${st==='ok'?'t-green':'t-red'}">${st==='ok'?'SUCCESS':'BLOCKED'}</span></td>
+    </tr>`).join('');
+}
+
+// ── ERRORS PAGE ──
+function initErrorsPage() {
+  document.getElementById('err1h').textContent = Math.floor(3+Math.random()*5);
+  document.getElementById('warn1h').textContent = Math.floor(8+Math.random()*10);
+  const errLog = document.getElementById('errorTerminal');
+  errLog.innerHTML = '';
+  const errs = [
+    ['err','ERROR','[AgentCore] Agent-08 command timeout after 3 retries'],
+    ['warn','WARN', '[SwarmMgr] Latency spike: 42ms on /api/v1/swarm/state'],
+    ['err','ERROR','[DB] Connection pool exhausted — 32/32 connections used'],
+    ['warn','WARN', '[Auth] Failed login attempt from 203.45.12.8'],
+    ['err','ERROR','[AgentCore] DELETE /api/v1/agents/08 — 404 Not Found'],
+    ['warn','WARN', '[Queue] sensor:ingest:queue above 80% capacity'],
+    ['info','INFO', '[Monitor] Auto-scaling triggered — spawning 2 workers'],
+    ['ok','INFO',   '[AgentCore] Agent-08 reconnected successfully'],
+    ['warn','WARN', '[MQTT] Broker heartbeat delayed 220ms'],
+    ['ok','INFO',   '[DB] Pool recovered — 18/32 connections active'],
+  ];
+  errs.forEach(([cls,level,msg])=>{
+    const now = new Date().toTimeString().slice(0,8);
+    const lClass = cls==='ok'?'lv-ok':cls==='warn'?'lv-warn':cls==='err'?'lv-err':'lv-info';
+    const line = document.createElement('div');
+    line.className='log-line';
+    line.innerHTML=`<span class="log-ts">${now}</span><span class="log-level ${lClass}">${level}</span><span class="log-msg">${msg}</span>`;
+    errLog.appendChild(line);
+  });
+}
+
+// ── ANALYTICS PAGE ──
+function initAnalyticsPage() {
+  document.getElementById('topEndpoints').innerHTML = `<div style="display:flex;flex-direction:column;gap:8px">` +
+    [['/ws/telemetry','9,200/min',92],['/api/v1/sensors/stream','1,840/min',74],['/api/v1/agents','482/min',48],['/api/v1/decision/plan','233/min',23],['/api/v1/swarm/state','88/min',9]].map(([ep,rate,pct])=>`
+    <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="color:var(--cyan);font-size:0.68rem">${ep}</span>
+        <span style="color:var(--text-dim);font-size:0.65rem">${rate}</span>
+      </div>
+      <div style="height:3px;background:var(--dim);border-radius:2px">
+        <div style="height:100%;width:${pct}%;background:var(--cyan)"></div>
+      </div>
+    </div>`).join('') + '</div>';
+
+  const ac = document.getElementById('analyticsChart');
+  if(!ac) return;
+  const actx = ac.getContext('2d');
+  ac.width = ac.parentElement.offsetWidth - 32; ac.height = 140;
+  const hours = Array.from({length:24},(_,i)=>Math.floor(50+Math.random()*300+(i>7&&i<20?200:0)));
+  const maxH = Math.max(...hours)*1.1;
+  actx.clearRect(0,0,ac.width,ac.height);
+  const bw = ac.width/24;
+  hours.forEach((v,i)=>{
+    const h2 = v/maxH*ac.height;
+    const x = i*bw+2, y = ac.height-h2;
+    actx.fillStyle = i>=8&&i<=18?'rgba(100,220,255,0.5)':'rgba(100,220,255,0.2)';
+    actx.fillRect(x, y, bw-4, h2);
+  });
+}
+
+// Resize handler for charts
+window.addEventListener('resize', () => {
+  drawTrafficChart();
+  drawDist();
+  if (document.getElementById('page-analytics').style.display !== 'none') initAnalyticsPage();
+});
+</script>
+</body>
+</html>
